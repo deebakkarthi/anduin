@@ -46,28 +46,28 @@ def resp_to_chat(r: requests.Response):
                     continue
                 elif "reasoning" in delta:
                     chat["reasoning"] += delta.get("reasoning", "")
+                    print(delta.get("reasoning", ""), end="", flush=True)
                 elif "content" in delta and "role" not in delta:
                     chat["content"] += delta.get("content", "")
+                    print(delta.get("content", ""), end="", flush=True)
     return chat
 
 
 def main() -> None:
-    r = requests.post(
-        UVARC_GENAI_ENDPOINT,
-        headers=HEADERS,
+    user_prompt=input()
+    with requests.post( UVARC_GENAI_ENDPOINT, headers=HEADERS,
         # Passing a dict through the json parameter automatically calls
         # json.dumps() on it and encodes it.
         json={
             "model": "Kimi K2.5",
-            "messages": [{"role": "user", "content": "Count till 10"}],
-            "stream": True,
+            "messages": [{"role": "user", "content": user_prompt}],
         },
-    )
-    # Raise exception incase of a bad request (4xxs)
-    r.raise_for_status()
-    chat = resp_to_chat(r)
-    print(f"REASONING:\n{chat["reasoning"]}")
-    print(f"CONTENT:\n{chat["content"]}")
+        # Stream in chunks
+        stream=True,
+        ) as r:
+        # Raise exception incase of a bad request (4xxs)
+        r.raise_for_status()
+        chat = resp_to_chat(r)
     sys.exit(0)
 
 
