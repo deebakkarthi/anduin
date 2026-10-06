@@ -28,7 +28,6 @@ def resp_to_chat(r: requests.Response):
 
             # Convert to json
             data = json.loads(data)
-
             # choices is an array of CompletionChoice
             # Usually this is a singleton but for the sake of completeness
             # I'm iterating over it
@@ -46,7 +45,6 @@ def resp_to_chat(r: requests.Response):
                     continue
                 elif "reasoning" in delta:
                     chat["reasoning"] += delta.get("reasoning", "")
-                    print(delta.get("reasoning", ""), end="", flush=True)
                 elif "content" in delta and "role" not in delta:
                     chat["content"] += delta.get("content", "")
                     print(delta.get("content", ""), end="", flush=True)
@@ -54,20 +52,32 @@ def resp_to_chat(r: requests.Response):
 
 
 def main() -> None:
-    user_prompt=input()
-    with requests.post( UVARC_GENAI_ENDPOINT, headers=HEADERS,
-        # Passing a dict through the json parameter automatically calls
-        # json.dumps() on it and encodes it.
-        json={
-            "model": "Kimi K2.5",
-            "messages": [{"role": "user", "content": user_prompt}],
-        },
-        # Stream in chunks
-        stream=True,
-        ) as r:
-        # Raise exception incase of a bad request (4xxs)
-        r.raise_for_status()
-        chat = resp_to_chat(r)
+    messages=[]
+    while True:
+        user_prompt=input()
+        if user_prompt == "/exit":
+            break
+        messages.append({ "role": "user",
+            "content": user_prompt
+            })
+        with requests.post( UVARC_GENAI_ENDPOINT, headers=HEADERS,
+            # Passing a dict through the json parameter automatically calls
+            # json.dumps() on it and encodes it.
+            json={
+                "model": "Kimi K2.5",
+                "messages": messages,
+                # Send stream as json too
+                "stream": True,
+                "stream_options": {"include_usage": True}
+            },
+            # Stream in chunks
+            stream=True,
+            ) as r:
+            # Raise exception incase of a bad request (4xxs)
+            r.raise_for_status()
+            chat = resp_to_chat(r)
+            print()
+            messages.append({"role":"assistant", "content": chat["content"]})
     sys.exit(0)
 
 
