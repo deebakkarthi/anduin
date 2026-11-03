@@ -15,6 +15,10 @@ UVARC_GENAI_ENDPOINT = "https://open-webui.rc.virginia.edu/api/chat/completions"
 # https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events?site_locale=en
 def resp_to_chat(r: requests.Response):
     chat = {"reasoning": "", "content": ""}
+
+    reasoning_encountered=False
+    response_encountered=False
+
     for line in r.iter_lines(decode_unicode=True):
         # Skip empty lines
         if not line:
@@ -39,14 +43,25 @@ def resp_to_chat(r: requests.Response):
                 #   - Reasoning token { "reasoning": "..." }
                 #   - Content token { "content": "..." }
                 # json.loads(data) converts this str to a dict for us
+                # so the final type of delta is a dict
                 delta = choice.get("delta", {})
                 if "role" in delta:
-                    # don't do anything of the Role token
+                    # don't do anything with the Role token
                     continue
                 elif "reasoning" in delta:
                     chat["reasoning"] += delta.get("reasoning", "")
+                    if not reasoning_encountered:
+                        print(f"\nREASONING\n{'='*80}")
+                        reasoning_encountered = not reasoning_encountered
+
+                    print(delta.get("reasoning", ""), end="", flush=True)
                 elif "content" in delta and "role" not in delta:
                     chat["content"] += delta.get("content", "")
+                    if not response_encountered:
+                        # Reasoning doesn't print a newline
+                        print("\n", end="");
+                        print("RESPONSE\n","="*80)
+                        response_encountered = not response_encountered
                     print(delta.get("content", ""), end="", flush=True)
     return chat
 
